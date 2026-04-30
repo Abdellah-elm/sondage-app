@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Accueil — SondagesApp{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="page-title">Bonjour, {{ user.prenom|default:user.username }}</h1>
+    <p class="page-subtitle">Découvrez les sondages disponibles et partagez vos avis</p>
+  </div>
+  <a href="{% url 'dashboard:sondages_disponibles' %}" class="btn btn-primary">
+    <i class="bi bi-search"></i>Parcourir les sondages
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6">
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon bg-green"><i class="bi bi-check2-circle"></i></div>
+      <div class="kpi-label">Sondages complétés</div>
+      <div class="kpi-value">{{ nb_participations }}</div>
+    </div>
+  </div>
+  <div class="col-sm-6">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon bg-blue"><i class="bi bi-bell"></i></div>
+      <div class="kpi-label">Notifications</div>
+      <div class="kpi-value">{{ notifications_non_lues }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Sondages disponibles</span>
+        <a href="{% url 'dashboard:sondages_disponibles' %}" class="btn btn-outline btn-sm">Voir tout</a>
+      </div>
+      {% if liens_recents %}
+      <div class="row g-0">
+        {% for lien in liens_recents %}
+        <div class="col-sm-6" style="padding:1.25rem;border-bottom:1px solid var(--border-light);{% if not forloop.last and forloop.counter|divisibleby:2 == False %}border-right:1px solid var(--border-light);{% endif %}">
+          <div style="font-weight:600;font-size:.875rem;color:var(--text-dark);margin-bottom:.375rem;">
+            {{ lien.sondage.titre|truncatechars:44 }}
+          </div>
+          {% if lien.sondage.description %}
+          <div style="font-size:.775rem;color:var(--text-muted);margin-bottom:.75rem;line-height:1.5;">
+            {{ lien.sondage.description|truncatechars:65 }}
+          </div>
+          {% endif %}
+          {% if lien.sondage.pk in soumis_ids %}
+          <span class="badge badge-success">Répondu</span>
+          {% else %}
+          <a href="{% url 'responses:prendre' lien.jeton %}" class="btn btn-primary btn-sm">
+            Répondre
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+        <div class="empty-state-title">Aucun sondage disponible</div>
+        <div class="empty-state-desc">Revenez plus tard, de nouveaux sondages apparaîtront ici.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Mes participations récentes</span>
+        {% if participations %}
+        <a href="{% url 'dashboard:mon_historique' %}" class="btn btn-outline btn-sm">Tout voir</a>
+        {% endif %}
+      </div>
+      {% if participations %}
+      <div class="list-group list-group-flush">
+        {% for s in participations %}
+        <div class="list-group-item">
+          <div style="font-weight:600;font-size:.825rem;color:var(--text-dark);">
+            {{ s.sondage.titre|truncatechars:36 }}
+          </div>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">
+            {{ s.termine_le|date:"d/m/Y à H:i" }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:2rem;">
+        <div class="empty-state-icon"><i class="bi bi-pencil-square"></i></div>
+        <div class="empty-state-title">Aucune participation</div>
+        <div class="empty-state-desc">Répondez à un sondage pour voir votre historique.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

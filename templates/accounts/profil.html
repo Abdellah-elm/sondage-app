@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Mon profil — SondagesApp{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-person-circle me-2"></i>Mon profil</h2>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body text-center py-4">
+        {% if profil.avatar %}
+        <img src="{{ profil.avatar.url }}" class="rounded-circle mb-3" width="100" height="100" style="object-fit:cover;">
+        {% else %}
+        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3"
+             style="width:80px;height:80px;">
+          <i class="bi bi-person-fill text-white" style="font-size:2rem;"></i>
+        </div>
+        {% endif %}
+        <h5>{{ user.get_full_name|default:user.username }}</h5>
+        <p class="text-muted">{{ user.email }}</p>
+        {% if profil.role == 'admin' %}
+        <span class="badge bg-danger">{{ profil.get_role_display }}</span>
+        {% elif profil.role == 'createur' %}
+        <span class="badge bg-primary">{{ profil.get_role_display }}</span>
+        {% else %}
+        <span class="badge bg-secondary">{{ profil.get_role_display }}</span>
+        {% endif %}
+        {% if profil.organisation %}
+        <p class="text-muted mt-2"><i class="bi bi-building me-1"></i>{{ profil.organisation }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="card-title"><i class="bi bi-graph-up me-2"></i>Statistiques</h6>
+        <div class="d-flex justify-content-between py-2 border-bottom">
+          <span class="text-muted">Sondages créés</span>
+          <strong>{{ profil.obtenir_nombre_sondages }}</strong>
+        </div>
+        <div class="d-flex justify-content-between py-2">
+          <span class="text-muted">Réponses soumises</span>
+          <strong>{{ profil.obtenir_nombre_reponses }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0">Modifier le profil</h6></div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% crispy form %}
+        </form>
+      </div>
+    </div>
+
+    {% if sondages_crees %}
+    <div class="card mt-3">
+      <div class="card-header"><h6 class="mb-0">Derniers sondages créés</h6></div>
+      <ul class="list-group list-group-flush">
+        {% for s in sondages_crees %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{% url 'surveys:detail' s.slug %}">{{ s.titre }}</a>
+          <small class="text-muted">{{ s.cree_le|date:"d/m/Y" }}</small>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

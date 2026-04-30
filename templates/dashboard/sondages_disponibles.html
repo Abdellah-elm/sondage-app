@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Sondages disponibles — SondagesApp{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-search me-2"></i>Sondages disponibles</h2>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control" placeholder="Rechercher un sondage..." value="{{ q }}">
+      </div>
+      <button type="submit" class="btn btn-outline-secondary">Chercher</button>
+      {% if q %}<a href="{% url 'dashboard:sondages_disponibles' %}" class="btn btn-outline-danger">×</a>{% endif %}
+    </form>
+  </div>
+</div>
+
+{% if liens %}
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+  {% for lien in liens %}
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body d-flex flex-column">
+        <h6 class="card-title">{{ lien.sondage.titre }}</h6>
+        {% if lien.sondage.description %}
+        <p class="card-text text-muted small">{{ lien.sondage.description|truncatechars:100 }}</p>
+        {% endif %}
+
+        <div class="d-flex flex-wrap gap-2 mb-3 mt-auto">
+          {% if lien.sondage.date_limite %}
+          <span class="badge bg-warning text-dark">
+            <i class="bi bi-calendar me-1"></i>Jusqu'au {{ lien.sondage.date_limite|date:"d/m/Y" }}
+          </span>
+          {% endif %}
+          {% if lien.sondage.est_protege_par_mdp %}
+          <span class="badge bg-secondary">
+            <i class="bi bi-lock me-1"></i>Protégé
+          </span>
+          {% endif %}
+          {% if lien.sondage.est_anonyme %}
+          <span class="badge bg-info text-dark">
+            <i class="bi bi-incognito me-1"></i>Anonyme
+          </span>
+          {% endif %}
+        </div>
+
+        {% if lien.sondage.pk in soumis_ids %}
+        <div class="d-flex align-items-center gap-2">
+          <span class="btn btn-success w-100 disabled">
+            <i class="bi bi-check-circle me-1"></i>Déjà répondu
+          </span>
+        </div>
+        {% else %}
+        <a href="{% url 'responses:prendre' lien.jeton %}" class="btn btn-primary w-100">
+          <i class="bi bi-play-circle me-1"></i>Répondre à ce sondage
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">Précédent</a>
+    </li>
+    {% endif %}
+    <li class="page-item disabled">
+      <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    </li>
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">Suivant</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+    {% if q %}
+    <p>Aucun sondage trouvé pour « {{ q }} ».</p>
+    <a href="{% url 'dashboard:sondages_disponibles' %}" class="btn btn-outline-secondary">Réinitialiser</a>
+    {% else %}
+    <p>Aucun sondage disponible pour l'instant.<br>Revenez plus tard !</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

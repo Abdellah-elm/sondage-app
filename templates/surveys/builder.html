@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %}Builder — {{ sondage.titre }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'surveys:detail' sondage.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <h2 class="mb-0"><i class="bi bi-pencil-square me-2"></i>{{ sondage.titre }}</h2>
+    <small class="text-muted">Éditeur de questions</small>
+  </div>
+  <a href="{% url 'surveys:share' sondage.slug %}" class="btn btn-success">
+    <i class="bi bi-share me-1"></i>Partager
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% for section in sections %}
+    <div class="card mb-4" id="section-{{ section.pk }}">
+      <div class="card-header section-header text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+          <i class="bi bi-folder me-2"></i>{{ section.titre }}
+          {% if section.description %}<small class="opacity-75 ms-2">— {{ section.description }}</small>{% endif %}
+        </h6>
+        <div class="d-flex gap-1">
+          <button class="btn btn-sm btn-light" data-bs-toggle="modal"
+                  data-bs-target="#modal-question-{{ section.pk }}">
+            <i class="bi bi-plus-circle me-1"></i>Question
+          </button>
+          {% if sections|length > 1 %}
+          <form method="post" action="{% url 'surveys:section_delete' sondage.slug section.pk %}"
+                onsubmit="return confirm('Supprimer cette section et toutes ses questions ?')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-light">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        {% for question in section.questions.all %}
+        <div class="question-card p-3 {% if not forloop.last %}border-bottom{% endif %}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="badge bg-primary">{{ question.get_type_question_display }}</span>
+                {% if question.est_obligatoire %}
+                <span class="badge bg-danger" style="font-size:.65rem;">Obligatoire</span>
+                {% endif %}
+                {% if question.condition_choix %}
+                <span class="badge bg-info" title="Affichée si : {{ question.condition_choix.texte }}">
+                  <i class="bi bi-arrow-return-right me-1"></i>Si « {{ question.condition_choix.texte|truncatechars:20 }} »
+                </span>
+                {% endif %}
+                <span class="text-muted small">Q{{ forloop.counter }}</span>
+              </div>
+              <p class="mb-1">{{ question.texte }}</p>
+              {% if question.est_type_echelle %}
+              <small class="text-muted">
+                Échelle {{ question.echelle_min }}–{{ question.echelle_max }}
+                {% if question.libelle_min %}({{ question.libelle_min }} → {{ question.libelle_max }}){% endif %}
+              </small>
+              {% endif %}
+              {% if question.est_type_choix %}
+              <div class="mt-1 d-flex flex-wrap gap-1">
+                {% for choix in question.obtenir_choix %}
+                <span class="badge bg-light text-dark border">{{ choix.texte }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            <form method="post" action="{% url 'surveys:question_delete' sondage.slug question.pk %}"
+                  onsubmit="return confirm('Supprimer cette question ?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger ms-2">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% empty %}
+        <div class="p-4 text-center text-muted">
+          <i class="bi bi-question-circle fs-3 d-block mb-2 opacity-25"></i>
+          Aucune question. Cliquez sur <strong>+ Question</strong>.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-question-{{ section.pk }}" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Ajouter une question — {{ section.titre }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form method="post" action="{% url 'surveys:question_add' sondage.slug section.pk %}">
+            {% csrf_token %}
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Texte de la question *</label>
+                <textarea name="texte" class="form-control" rows="2" required
+                          placeholder="Ex: Comment évaluez-vous..."></textarea>
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-md-5">
+                  <label class="form-label fw-bold">Type *</label>
+                  <select name="type_question" class="form-select"
+                          id="type-q-{{ section.pk }}"
+                          onchange="toggleQuestionFields('{{ section.pk }}', this.value)">
+                    {% for value, label in question_types %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold">Obligatoire</label>
+                  <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" name="est_obligatoire" value="on" checked>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Logique conditionnelle</label>
+                  <select name="condition_choix" class="form-select form-select-sm">
+                    <option value="">— Toujours afficher —</option>
+                    {% for s in sections %}
+                    {% for q in s.questions.all %}
+                    {% if q.est_type_choix %}
+                    <optgroup label="{{ q.texte|truncatechars:30 }}">
+                      {% for choix in q.obtenir_choix %}
+                      <option value="{{ choix.pk }}">{{ choix.texte }}</option>
+                      {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                    {% endfor %}
+                    {% endfor %}
+                  </select>
+                  <small class="text-muted">Afficher si ce choix est sélectionné</small>
+                </div>
+              </div>
+
+              <div id="echelle-{{ section.pk }}" class="d-none">
+                <div class="row g-2 mb-3">
+                  <div class="col-md-3">
+                    <label class="form-label">Min</label>
+                    <input type="number" name="echelle_min" class="form-control" value="1">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Max</label>
+                    <input type="number" name="echelle_max" class="form-control" value="10">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Libellé min</label>
+                    <input type="text" name="libelle_min" class="form-control" placeholder="Très mauvais">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Libellé max</label>
+                    <input type="text" name="libelle_max" class="form-control" placeholder="Excellent">
+                  </div>
+                </div>
+              </div>
+
+              <div id="choix-section-{{ section.pk }}">
+                <label class="form-label fw-bold">Options de réponse</label>
+                <div id="choix-list-{{ section.pk }}">
+                  <div class="input-group mb-2">
+                    <input type="text" class="form-control choix-input-{{ section.pk }}" placeholder="Option 1">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="supprimerChoix(this)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                  <div class="input-group mb-2">
+                    <input type="text" class="form-control choix-input-{{ section.pk }}" placeholder="Option 2">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="supprimerChoix(this)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        onclick="ajouterChoix('{{ section.pk }}')">
+                  <i class="bi bi-plus"></i> Ajouter une option
+                </button>
+                <input type="hidden" name="choix_json" id="choix-json-{{ section.pk }}">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-primary"
+                      onclick="prepareChoix('{{ section.pk }}')">
+                <i class="bi bi-plus-circle me-1"></i>Ajouter la question
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Panneau droit -->
+  <div class="col-lg-4">
+    <div class="card sticky-top" style="top:1rem;">
+      <div class="card-header"><h6 class="mb-0"><i class="bi bi-folder-plus me-2"></i>Ajouter une section</h6></div>
+      <div class="card-body">
+        <form method="post" action="{% url 'surveys:section_add' sondage.slug %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Titre *</label>
+            <input type="text" name="titre" class="form-control" required placeholder="Section 2">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="2"></textarea>
+          </div>
+          <input type="hidden" name="ordre" value="0">
+          <button type="submit" class="btn btn-outline-primary w-100">
+            <i class="bi bi-folder-plus me-1"></i>Ajouter la section
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body text-center">
+        <h6 class="text-muted mb-3">Aperçu</h6>
+        <div class="row g-2 text-center">
+          <div class="col-6">
+            <div class="fw-bold fs-4">{{ sections|length }}</div>
+            <div class="text-muted small">Sections</div>
+          </div>
+          <div class="col-6">
+            <div class="fw-bold fs-4">{{ total_questions }}</div>
+            <div class="text-muted small">Questions</div>
+          </div>
+        </div>
+        <hr>
+        <div class="d-grid gap-2">
+          <a href="{% url 'surveys:share' sondage.slug %}" class="btn btn-success btn-sm">
+            <i class="bi bi-share me-1"></i>Partager
+          </a>
+          <a href="{% url 'analytics:results' sondage.slug %}" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-bar-chart me-1"></i>Voir les résultats
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleQuestionFields(sectionId, type) {
+  const isChoix = ['choix_unique', 'choix_multiple'].includes(type);
+  const isEchelle = type === 'echelle';
+  document.getElementById('choix-section-' + sectionId).style.display = isChoix ? 'block' : 'none';
+  document.getElementById('echelle-' + sectionId).classList.toggle('d-none', !isEchelle);
+}
+
+function ajouterChoix(sectionId) {
+  const list = document.getElementById('choix-list-' + sectionId);
+  const count = list.querySelectorAll('input').length + 1;
+  const div = document.createElement('div');
+  div.className = 'input-group mb-2';
+  div.innerHTML = `<input type="text" class="form-control choix-input-${sectionId}" placeholder="Option ${count}">
+    <button type="button" class="btn btn-outline-danger btn-sm" onclick="supprimerChoix(this)">
+      <i class="bi bi-x"></i></button>`;
+  list.appendChild(div);
+}
+
+function supprimerChoix(btn) {
+  btn.closest('.input-group').remove();
+}
+
+function prepareChoix(sectionId) {
+  const inputs = document.querySelectorAll('.choix-input-' + sectionId);
+  const choix = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+  document.getElementById('choix-json-' + sectionId).value = JSON.stringify(choix);
+}
+
+// Initialiser l'état de chaque modal au moment de l'ouverture
+document.querySelectorAll('[id^="modal-question-"]').forEach(modal => {
+  modal.addEventListener('show.bs.modal', function() {
+    const sectionId = this.id.replace('modal-question-', '');
+    const type = document.getElementById('type-q-' + sectionId).value;
+    toggleQuestionFields(sectionId, type);
+  });
+});
+</script>
+{% endblock %}

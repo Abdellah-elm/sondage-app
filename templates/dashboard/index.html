@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Tableau de bord — SondagesApp{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="page-title">Tableau de bord</h1>
+    <p class="page-subtitle">Bienvenue, {{ user.prenom|default:user.username }}</p>
+  </div>
+  <a href="{% url 'surveys:create' %}" class="btn btn-primary">
+    <i class="bi bi-plus"></i>Nouveau sondage
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon bg-blue"><i class="bi bi-clipboard-data"></i></div>
+      <div class="kpi-label">Total sondages</div>
+      <div class="kpi-value">{{ nb_sondages }}</div>
+      <div class="kpi-sub">{{ nb_actifs }} actif{{ nb_actifs|pluralize }}</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon bg-green"><i class="bi bi-people"></i></div>
+      <div class="kpi-label">Réponses reçues</div>
+      <div class="kpi-value">{{ total_reponses }}</div>
+      <div class="kpi-sub">Toutes périodes</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-icon bg-orange"><i class="bi bi-toggle-on"></i></div>
+      <div class="kpi-label">Sondages actifs</div>
+      <div class="kpi-value">{{ nb_actifs }}</div>
+      <div class="kpi-sub">En cours de diffusion</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card kpi-red">
+      <div class="kpi-icon bg-red"><i class="bi bi-bell"></i></div>
+      <div class="kpi-label">Notifications</div>
+      <div class="kpi-value">{{ notifications_non_lues }}</div>
+      <div class="kpi-sub">Non lues</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Sondages récents</span>
+        <a href="{% url 'surveys:list' %}" class="btn btn-outline btn-sm">Voir tout</a>
+      </div>
+      {% if sondages_recents %}
+      <div class="list-group list-group-flush">
+        {% for s in sondages_recents %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start">
+            <div style="min-width:0;">
+              <a href="{% url 'surveys:detail' s.slug %}"
+                 style="font-weight:600;font-size:.85rem;color:var(--text-dark);">
+                {{ s.titre|truncatechars:42 }}
+              </a>
+              <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">
+                {{ s.cree_le|date:"d/m/Y" }} &middot; {{ s.obtenir_nombre_reponses }} réponse{{ s.obtenir_nombre_reponses|pluralize }}
+              </div>
+            </div>
+            <div class="ms-3 flex-shrink-0">
+              {% if s.est_archive %}
+              <span class="badge badge-muted">Archivé</span>
+              {% elif s.est_actif %}
+              <span class="badge badge-success">Actif</span>
+              {% else %}
+              <span class="badge badge-warning">Inactif</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-clipboard"></i></div>
+        <div class="empty-state-title">Aucun sondage</div>
+        <div class="empty-state-desc">Créez votre premier sondage pour commencer.</div>
+        <a href="{% url 'surveys:create' %}" class="btn btn-primary btn-sm">Créer un sondage</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Activité récente</span>
+      </div>
+      {% if soumissions_recentes %}
+      <div class="list-group list-group-flush">
+        {% for s in soumissions_recentes %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div style="font-weight:600;font-size:.85rem;color:var(--text-dark);">
+                {{ s.sondage.titre|truncatechars:38 }}
+              </div>
+              <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">
+                {% if s.repondant %}{{ s.repondant.username }}{% else %}Anonyme{% endif %}
+              </div>
+            </div>
+            <span style="font-size:.75rem;color:var(--text-light);white-space:nowrap;margin-left:.75rem;">
+              {{ s.termine_le|date:"d/m H:i" }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+        <div class="empty-state-title">Aucune réponse</div>
+        <div class="empty-state-desc">Partagez vos sondages pour recevoir des réponses.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

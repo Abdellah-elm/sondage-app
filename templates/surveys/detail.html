@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}{{ sondage.titre }} — SondagesApp{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'surveys:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <h2 class="mb-0">{{ sondage.titre }}</h2>
+    <small class="text-muted">Créé le {{ sondage.cree_le|date:"d/m/Y à H:i" }}</small>
+  </div>
+  <div class="d-flex gap-2">
+    {% if sondage.est_archive %}
+    <span class="badge bg-secondary fs-6">Archivé</span>
+    {% elif sondage.est_actif %}
+    <span class="badge bg-success fs-6">Actif</span>
+    {% else %}
+    <span class="badge bg-warning text-dark fs-6">Inactif</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'surveys:builder' sondage.slug %}" class="btn btn-primary">
+    <i class="bi bi-pencil-square me-1"></i>Builder
+  </a>
+  <a href="{% url 'analytics:results' sondage.slug %}" class="btn btn-info text-white">
+    <i class="bi bi-bar-chart me-1"></i>Résultats
+  </a>
+  <a href="{% url 'surveys:share' sondage.slug %}" class="btn btn-outline-success">
+    <i class="bi bi-share me-1"></i>Partager
+  </a>
+  <a href="{% url 'surveys:edit' sondage.slug %}" class="btn btn-outline-secondary">
+    <i class="bi bi-gear me-1"></i>Paramètres
+  </a>
+  <div class="dropdown">
+    <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+      Plus
+    </button>
+    <ul class="dropdown-menu">
+      <li>
+        <form method="post" action="{% url 'surveys:duplicate' sondage.slug %}">
+          {% csrf_token %}
+          <button type="submit" class="dropdown-item">
+            <i class="bi bi-copy me-2"></i>Dupliquer</button>
+        </form>
+      </li>
+      <li>
+        <form method="post" action="{% url 'surveys:archive' sondage.slug %}">
+          {% csrf_token %}
+          <button type="submit" class="dropdown-item">
+            <i class="bi bi-archive me-2"></i>
+            {% if sondage.est_archive %}Désarchiver{% else %}Archiver{% endif %}
+          </button>
+        </form>
+      </li>
+      <li><a class="dropdown-item" href="{% url 'surveys:export_csv' sondage.slug %}">
+        <i class="bi bi-file-earmark-csv me-2"></i>Export CSV</a></li>
+      <li><a class="dropdown-item" href="{% url 'surveys:export_xlsx' sondage.slug %}">
+        <i class="bi bi-file-earmark-excel me-2"></i>Export Excel</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-danger" href="{% url 'surveys:delete' sondage.slug %}">
+        <i class="bi bi-trash me-2"></i>Supprimer</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistiques</h6></div>
+      <div class="card-body">
+        <div class="row g-3 text-center">
+          <div class="col-6">
+            <div class="fs-2 fw-bold text-primary">{{ stats.total_soumissions }}</div>
+            <div class="text-muted small">Total</div>
+          </div>
+          <div class="col-6">
+            <div class="fs-2 fw-bold text-success">{{ stats.completes }}</div>
+            <div class="text-muted small">Complètes</div>
+          </div>
+          <div class="col-12">
+            <div class="progress" style="height:8px;">
+              <div class="progress-bar bg-success" style="width:{{ stats.taux_completion }}%"></div>
+            </div>
+            <div class="text-muted small mt-1">Taux de complétion : {{ stats.taux_completion }}%</div>
+          </div>
+          {% if stats.duree_moyenne %}
+          <div class="col-12 border-top pt-2">
+            <div class="text-muted small">Durée moyenne</div>
+            <div class="fw-bold">{{ stats.duree_moyenne }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if lien_principal %}
+    <div class="card mt-3">
+      <div class="card-header"><h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Lien public</h6></div>
+      <div class="card-body">
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control" id="lien-url" readonly
+                 value="{{ request.scheme }}://{{ request.get_host }}{% url 'responses:prendre' lien_principal.jeton %}">
+          <button class="btn btn-outline-secondary" onclick="copierLien()">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+        <a href="{% url 'surveys:share' sondage.slug %}" class="btn btn-sm btn-outline-primary mt-2 w-100">
+          Gérer les liens
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Structure du sondage</h6>
+        <a href="{% url 'surveys:builder' sondage.slug %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-pencil me-1"></i>Éditer
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if sections %}
+          {% for section in sections %}
+          <div class="p-3 {% if not forloop.last %}border-bottom{% endif %}">
+            <h6 class="text-primary mb-2"><i class="bi bi-folder me-1"></i>{{ section.titre }}</h6>
+            {% for question in section.questions.all %}
+            <div class="d-flex align-items-start gap-2 py-1">
+              <span class="badge bg-light text-dark border mt-1 text-nowrap small">
+                {{ question.get_type_question_display }}
+              </span>
+              <span class="small">{{ question.texte|truncatechars:80 }}</span>
+              {% if question.est_obligatoire %}
+              <span class="text-danger ms-auto" title="Obligatoire">*</span>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-muted small mb-0">Aucune question dans cette section.</p>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="p-4 text-center text-muted">
+          <i class="bi bi-clipboard fs-2 d-block mb-2 opacity-25"></i>
+          Aucune section. <a href="{% url 'surveys:builder' sondage.slug %}">Ajouter des questions</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function copierLien() {
+  const input = document.getElementById('lien-url');
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert('Lien copié !');
+  });
+}
+</script>
+{% endblock %}

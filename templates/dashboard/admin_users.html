@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}Gestion des rôles — Admin{% endblock %}
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{% url 'dashboard:admin' %}">Administration</a>
+  <span class="breadcrumb-sep"><i class="bi bi-chevron-right" style="font-size:.6rem;"></i></span>
+  <span>Gestion des rôles</span>
+</div>
+
+<div class="page-header">
+  <h1 class="page-title">Gestion des rôles</h1>
+  <p class="page-subtitle">Attribuez les permissions à chaque utilisateur</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card" style="border-left:3px solid var(--text-muted);">
+      <div class="card-body" style="padding:1rem;">
+        <div style="font-weight:700;font-size:.85rem;color:var(--text-dark);margin-bottom:.25rem;">Visiteur</div>
+        <div style="font-size:.775rem;color:var(--text-muted);">Peut répondre aux sondages et consulter son historique uniquement.</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card" style="border-left:3px solid var(--primary);">
+      <div class="card-body" style="padding:1rem;">
+        <div style="font-weight:700;font-size:.85rem;color:var(--primary);margin-bottom:.25rem;">Créateur</div>
+        <div style="font-size:.775rem;color:var(--text-muted);">Crée, gère et analyse ses propres sondages.</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card" style="border-left:3px solid var(--danger);">
+      <div class="card-body" style="padding:1rem;">
+        <div style="font-weight:700;font-size:.85rem;color:var(--danger);margin-bottom:.25rem;">Admin</div>
+        <div style="font-size:.775rem;color:var(--text-muted);">Accès complet : tous les sondages, gestion des utilisateurs.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4" style="padding:.875rem 1.25rem;">
+  <form method="get" class="d-flex gap-3 flex-wrap align-items-center">
+    <div class="flex-grow-1" style="min-width:200px;">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control" placeholder="Rechercher un utilisateur..." value="{{ q }}">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;">
+      <a href="?role={% if role_filtre %}{% else %}{% endif %}" class="btn btn-outline btn-sm {% if not role_filtre %}btn-primary{% endif %}">Tous</a>
+      <a href="?role=visiteur{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if role_filtre == 'visiteur' %}btn-primary{% else %}btn-outline{% endif %}">Visiteurs</a>
+      <a href="?role=createur{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if role_filtre == 'createur' %}btn-primary{% else %}btn-outline{% endif %}">Créateurs</a>
+      <a href="?role=admin{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if role_filtre == 'admin' %}btn-primary{% else %}btn-outline{% endif %}">Admins</a>
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm">Chercher</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Email</th>
+          <th>Inscrit le</th>
+          <th>Rôle actuel</th>
+          <th style="text-align:center;min-width:220px;">Changer le rôle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in utilisateurs %}
+        <tr>
+          <td>
+            <div style="font-weight:600;color:var(--text-dark);">
+              {{ u.username }}
+              {% if u == request.user %}
+              <span class="badge badge-warning ms-1">Vous</span>
+              {% endif %}
+              {% if u.is_superuser %}
+              <span class="badge badge-muted ms-1">Superuser</span>
+              {% endif %}
+            </div>
+            {% if u.prenom or u.nom %}
+            <div style="font-size:.75rem;color:var(--text-muted);">{{ u.prenom }} {{ u.nom }}</div>
+            {% endif %}
+          </td>
+          <td style="color:var(--text-muted);font-size:.825rem;">{{ u.email|default:"—" }}</td>
+          <td style="color:var(--text-muted);font-size:.825rem;white-space:nowrap;">{{ u.date_joined|date:"d/m/Y" }}</td>
+          <td>
+            {% with r=u.profil.role %}
+            {% if r == 'admin' %}
+            <span class="badge badge-danger">Admin</span>
+            {% elif r == 'createur' %}
+            <span class="badge badge-primary">Créateur</span>
+            {% else %}
+            <span class="badge badge-muted">Visiteur</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            {% if u != request.user and not u.is_superuser %}
+            <form method="post" action="{% url 'dashboard:admin_change_role' u.pk %}"
+                  style="display:flex;gap:.375rem;justify-content:center;">
+              {% csrf_token %}
+              <button type="submit" name="role" value="visiteur"
+                      class="btn btn-sm {% if u.profil.role == 'visiteur' %}btn-secondary{% else %}btn-outline{% endif %}">
+                Visiteur
+              </button>
+              <button type="submit" name="role" value="createur"
+                      class="btn btn-sm {% if u.profil.role == 'createur' %}btn-primary{% else %}btn-outline{% endif %}">
+                Créateur
+              </button>
+              <button type="submit" name="role" value="admin"
+                      class="btn btn-sm {% if u.profil.role == 'admin' %}btn-danger{% else %}btn-outline{% endif %}">
+                Admin
+              </button>
+            </form>
+            {% else %}
+            <span style="font-size:.775rem;color:var(--text-light);display:block;text-align:center;">Non modifiable</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state" style="padding:2.5rem;">
+              <div class="empty-state-icon"><i class="bi bi-people"></i></div>
+              <div class="empty-state-title">Aucun utilisateur trouvé</div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4 d-flex justify-content-center">
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&role={{ role_filtre }}"><i class="bi bi-chevron-left"></i></a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&role={{ role_filtre }}"><i class="bi bi-chevron-right"></i></a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

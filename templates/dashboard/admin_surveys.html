@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Tous les sondages — Admin{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-clipboard-data me-2"></i>Tous les sondages</h2>
+  <a href="{% url 'dashboard:admin' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Admin
+  </a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" class="form-control" placeholder="Rechercher..." value="{{ q }}">
+      <button type="submit" class="btn btn-outline-secondary">Chercher</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Titre</th>
+          <th>Créateur</th>
+          <th>Réponses</th>
+          <th>Statut</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sondages %}
+        <tr>
+          <td><a href="{% url 'surveys:detail' s.slug %}">{{ s.titre|truncatechars:45 }}</a></td>
+          <td class="text-muted small">{{ s.createur.username }}</td>
+          <td>{{ s.obtenir_nombre_reponses }}</td>
+          <td>
+            {% if s.est_archive %}<span class="badge bg-secondary">Archivé</span>
+            {% elif s.est_actif %}<span class="badge bg-success">Actif</span>
+            {% else %}<span class="badge bg-warning text-dark">Inactif</span>{% endif %}
+          </td>
+          <td class="small text-muted">{{ s.cree_le|date:"d/m/Y" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'surveys:detail' s.slug %}" class="btn btn-xs btn-outline-primary btn-sm">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'analytics:results' s.slug %}" class="btn btn-xs btn-outline-info btn-sm">
+                <i class="bi bi-bar-chart"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Aucun sondage.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">Précédent</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">Suivant</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}
