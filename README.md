@@ -1,7 +1,9 @@
 # SondagesApp — Application de sondages interactifs
 
 Application web Django permettant de créer, diffuser et analyser des sondages et questionnaires interactifs.
+**DEMO**
 
+![demo](pic/s.png)
 ---
 
 ## Stack technique
