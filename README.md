@@ -3,7 +3,7 @@
 Application web Django permettant de créer, diffuser et analyser des sondages et questionnaires interactifs.
 **DEMO**
 
-![demo](pic/s.png)
+![demo](pic/s.jpeg)
 ---
 
 ## Stack technique
